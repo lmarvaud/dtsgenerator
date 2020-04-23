@@ -1,5 +1,5 @@
 {
-  "name": "dtsgenerator",
+  "name": "@anttiviljami/dtsgenerator",
   "version": "3.12.1",
   "description": "TypeScript d.ts file generator for JSON Schema file",
   "bin": {
