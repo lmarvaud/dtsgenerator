@@ -23,7 +23,14 @@ interface PluginConfig {
     option: boolean | Record<string, unknown>;
 }
 
+export interface ExportedType {
+    name: string;
+    path: string;
+    schemaRef: string;
+}
+
 export default class DtsGenerator {
+    public exportedTypes: ExportedType[] = [];
     private resolver = new ReferenceResolver();
     private currentSchema!: NormalizedSchema;
     private contents: Schema[];
@@ -79,20 +86,14 @@ export default class DtsGenerator {
 
     private buildSchemaMergedMap(schemas: IterableIterator<Schema>): any {
         const map: any = {};
-        const paths: { path: string[]; type: Schema }[] = [];
         for (const type of schemas) {
             const path = type.id.toNames();
-            paths.push({ path, type });
-        }
-
-        for (const item of paths) {
-            const path = item.path;
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const parent = get(map, path, true);
             if (parent == null) {
-                set(map, path, { [typeMarker]: item.type });
+                set(map, path, { [typeMarker]: type });
             } else {
-                Object.assign(parent, { [typeMarker]: item.type });
+                Object.assign(parent, { [typeMarker]: type });
             }
         }
         if (Object.keys(map).length === 0) {
@@ -211,11 +212,24 @@ export default class DtsGenerator {
                     return this.generateDeclareType(normalized, root);
             }
         };
+        this.addExport(normalized)
         return ast.addOptionalInformation(
             ast.addComment(getNode(), normalized, true),
             normalized,
             true
         );
+    }
+
+    public getExports() {
+        return this.exportedTypes;
+    }
+
+    private addExport(schema: Schema) {
+        const names = schema.id.toNames();
+        const name = names[names.length - 1]
+        const schemaRef = schema.id.getJsonPointerHash();
+        const path = names.join('.');
+        this.exportedTypes.push({ name, path, schemaRef });
     }
 
     private normalizeContent(
